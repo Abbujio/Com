@@ -1,0 +1,36 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+variable "ami" {
+    description = "EC2 ami id"
+    type        = string
+    default     = "ami-0a3c3a20c09d6f377"
+    validation {
+        condition = length(var.ami) <= 50
+        error_message = "Err :ami is too long.."
+    }
+}
+
+variable "instance_type" {
+    description  = " Instance"
+    type         = string
+    default      = "t2.micro"
+}
+
+variable "storage_account"{
+    type     = list(string)
+    default  = ["web","api","db"]
+}
