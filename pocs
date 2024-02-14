@@ -63,3 +63,103 @@ resource "azurerm_windows_virtual_machine" "pocs_vm" {
     version   = "latest"
   }
 }
+
+__________________________________________________________________________________________________________________________________________________________________
+Recovery vault.
+
+
+provider "azurerm" {
+  features {}
+}
+
+resource "azurerm_resource_group" "pocs" {
+  name     = "pocs"
+  location = "East US"  # Change to your desired Azure region
+}
+
+resource "azurerm_recovery_services_vault" "pocs_vault" {
+  name                = "pocs-vault"
+  location            = azurerm_resource_group.pocs.location
+  resource_group_name = azurerm_resource_group.pocs.name
+  sku                 = "Standard"
+}
+
+resource "azurerm_recovery_services_protected_vm" "example" {
+  name                = "example-vm"
+  recovery_vault_name = azurerm_recovery_services_vault.pocs_vault.name
+  resource_group_name = azurerm_resource_group.pocs.name
+  source_vm_id        = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/pocs/providers/Microsoft.Compute/virtualMachines/example-vm"
+}
+
+resource "azurerm_recovery_services_backup_policy_vm" "example" {
+  name                = "example-policy"
+  recovery_vault_name = azurerm_recovery_services_vault.pocs_vault.name
+  resource_group_name = azurerm_resource_group.pocs.name
+  backup_schedule {
+    frequency = "Daily"
+    time      = "07:00"
+  }
+  retention_daily {
+    count = 7
+  }
+}
+
+--------------------------------------------------------------------------------
+logic app
+
+
+resource "azurerm_logic_app_workflow" "pocs_logic_app" {
+  name                = "pocs-logic-app"
+  location            = azurerm_resource_group.pocs.location
+  resource_group_name = azurerm_resource_group.pocs.name
+
+_________________________________________________________________________
+
+automation account 
+
+resource "azurerm_automation_account" "pocs_automation" {
+  name                = "pocs"
+  location            = azurerm_resource_group.pocs.location
+  resource_group_name = azurerm_resource_group.pocs.name
+  sku_name            = "Free"
+}
+
+-------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+--------------------------------------------------------------------------------------------------------
+
+resource "azurerm_storage_account" "pocs_storage" {
+  name                     = "pocsstorage"
+  resource_group_name      = azurerm_resource_group.pocs.name
+  location                 = azurerm_resource_group.pocs.location
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+
+  tags = {
+    environment = "production"
+  }
+}
+
+
+----------------------------------------------------------------
+
+resource "azurerm_storage_account" "pocs_storage" {
+  name                     = "pocsstorage"
+  resource_group_name      = azurerm_resource_group.pocs.name
+  location                 = azurerm_resource_group.pocs.location
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+
+  tags = {
+    environment = "production"
+  }
+}
+
+-------------------------------------------------------
