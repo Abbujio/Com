@@ -225,7 +225,55 @@ resource "azurerm_resource_group" "pocs" {
 
 resource "azurerm_automation_account" "eximius_automation" {
   name                = "Eximius-Pocs_automate"
+  location            = azurerm_resource_group.pocs.
+----------------------------------------------------------------------------------------------------------
+provider "azurerm" {
+  features {}
+}
+
+# Resource Group
+resource "azurerm_resource_group" "pocs" {
+  name     = "pocs"
+  location = "East US"
+}
+
+# Azure ML Workspace
+resource "azurerm_machine_learning_workspace" "eximuspoc_ml_workspace" {
+  name                = "eximusPoc-ml"
   location            = azurerm_resource_group.pocs.location
+  resource_group_name = azurerm_resource_group.pocs.name
+  friendly_name       = "EximusPoc ML Workspace"
+}
+
+# Azure Key Vault
+resource "azurerm_key_vault" "eximusmlkeyvault" {
+  name                        = "eximusmlkeyvault"
+  resource_group_name         = azurerm_resource_group.pocs.name
+  location                    = azurerm_resource_group.pocs.location
+  enabled_for_disk_encryption = true
+  tenant_id                   = "your_tenant_id"  # Replace with your Azure tenant ID
+  sku_name                    = "standard"
+}
+
+# Azure Container Registry
+resource "azurerm_container_registry" "eximuspocs_registry" {
+  name                     = "eximuspocsregistry"
+  resource_group_name      = azurerm_resource_group.pocs.name
+  location                 = azurerm_resource_group.pocs.location
+  sku                      = "Standard"
+  admin_enabled            = true
+  georeplication_locations = ["East US"]  # Add additional locations if needed
+}
+
+# Application Insights
+resource "azurerm_application_insights" "eximuspoc_insights" {
+  name                = "eximuspoc-insights"
+  location            = azurerm_resource_group.pocs.location
+  resource_group_name = azurerm_resource_group.pocs.name
+  application_type    = "web"
+  application_id      = null
+}
+
   resource_group_name = azurerm_resource_group.pocs.name
   sku_name            = "Basic"
 }
