@@ -1,0 +1,117 @@
+provider "azurerm" {
+  features {}
+}
+
+variable "location" {
+  default = "East US"
+}
+
+variable "rg_name" {
+  default = "pocs"
+}
+
+variable "vm_name" {
+  default = "Eximius-Pocs"
+}
+
+variable "public_ip_name" {
+  default = "pocs-public-ip"
+}
+
+variable "vnet_name" {
+  default = "pocs_vnet"
+}
+
+variable "subnet_name" {
+  default = "pocs_subnet"
+}
+
+variable "nic_name" {
+  default = "pocs-nic"
+}
+
+variable "nsg_name" {
+  default = "poc-nsg"
+}
+
+# Resource Group
+resource "azurerm_resource_group" "rg" {
+  name     = var.rg_name
+  location = var.location
+}
+
+# Virtual Network
+resource "azurerm_virtual_network" "vnet" {
+  name                = var.vnet_name
+  address_space       = ["10.0.0.0/16"]
+  location            = var.location
+  resource_group_name = azurerm_resource_group.rg.name
+}
+
+# Subnet
+resource "azurerm_subnet" "subnet" {
+  name                 = var.subnet_name
+  resource_group_name  = azurerm_resource_group.rg.name
+  virtual_network_name = azurerm_virtual_network.vnet.name
+  address_prefixes     = ["10.0.1.0/24"]
+}
+
+# Public IP
+resource "azurerm_public_ip" "public_ip" {
+  name                = var.public_ip_name
+  location            = var.location
+  resource_group_name = azurerm_resource_group.rg.name
+  allocation_method   = "Static"
+}
+
+# Network Interface
+resource "azurerm_network_interface" "nic" {
+  name                      = var.nic_name
+  location                  = var.location
+  resource_group_name       = azurerm_resource_group.rg.name
+
+  ip_configuration {
+    name                          = "ipconfig1"
+    subnet_id                     = azurerm_subnet.subnet.id
+    private_ip_address_allocation = "Dynamic"
+    public_ip_address_id          = azurerm_public_ip.public_ip.id
+  }
+}
+
+# Network Security Group
+resource "azurerm_network_security_group" "nsg" {
+  name                = var.nsg_name
+  location            = var.location
+  resource_group_name = azurerm_resource_group.rg.name
+}
+
+# Associate NSG with NIC
+resource "azurerm_network_interface_security_group_association" "nic_nsg_association" {
+  network_interface_id      = azurerm_network_interface.nic.id
+  network_security_group_id = azurerm_network_security_group.nsg.id
+}
+
+# Windows Virtual Machine
+resource "azurerm_windows_virtual_machine" "vm" {
+  name                = var.vm_name
+  resource_group_name = azurerm_resource_group.rg.name
+  location            = var.location
+  size                = "Standard_DS1_v2"
+  admin_username      = "adminuser"
+  admin_password      = "Password123!"  # Change to your desired password
+  network_interface_ids = [azurerm_network_interface.nic.id]
+  computer_name       = var.vm_name
+  enable_automatic_updates = true
+
+  os_disk {
+    caching              = "ReadWrite"
+    storage_account_type = "Standard_LRS"
+  }
+
+  source_image_reference {
+    publisher = "MicrosoftWindowsServer"
+    offer     = "WindowsServer"
+    sku       = "2019-Datacenter"
+    version   = "latest"
+  }
+}
