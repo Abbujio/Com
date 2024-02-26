@@ -1,0 +1,140 @@
+1.Main Configuration (main.tf): 
+----------------------------------------------------
+provider "azurerm" {
+  features {}
+}
+
+module "azure_vm" {
+  source = "./modules/azure_vm"
+
+  vm_name                = "Eximius-Pocs"
+  resource_group_name    = "pocs"
+  location               = "East US"
+  public_ip_name         = "pocs-public-ip"
+  vnet_name              = "pocs-vnet"
+  subnet_name            = "pocs-subnet"
+  network_interface_name = "pocs-nic"
+  nsg_name               = "poc-nsg"
+}
+---------........------------------
+2..
+├── main.tf
+└── modules
+    └── azure_vm
+        ├── main.tf
+        ├── variables.tf
+        ├── outputs.tf
+----------------------------
+2.Module Configuration (modules/azure_vm/main.tf):
+
+
+resource "azurerm_public_ip" "pocs_public_ip" {
+  name                = var.public_ip_name
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  allocation_method   = "Dynamic"
+}
+
+resource "azurerm_virtual_network" "pocs_vnet" {
+  name                = var.vnet_name
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  address_space       = ["10.0.0.0/16"]
+}
+
+resource "azurerm_subnet" "pocs_subnet" {
+  name                 = var.subnet_name
+  resource_group_name  = var.resource_group_name
+  virtual_network_name = azurerm_virtual_network.pocs_vnet.name
+  address_prefixes     = ["10.0.1.0/24"]
+}
+
+resource "azurerm_network_security_group" "poc_nsg" {
+  name                = var.nsg_name
+  location            = var.location
+  resource_group_name = var.resource_group_name
+
+  # Define security rules as needed
+}
+
+resource "azurerm_network_interface" "pocs_nic" {
+  name                = var.network_interface_name
+  location            = var.location
+  resource_group_name = var.resource_group_name
+
+  ip_configuration {
+    name                          = "ipconfig"
+    subnet_id                     = azurerm_subnet.pocs_subnet.id
+    private_ip_address_allocation = "Dynamic"
+    public_ip_address_id          = azurerm_public_ip.pocs_public_ip.id
+  }
+
+  network_security_group_id = azurerm_network_security_group.poc_nsg.id
+}
+
+resource "azurerm_windows_virtual_machine" "eximius_pocs_vm" {
+  name                = var.vm_name
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  network_interface_ids = [
+    azurerm_network_interface.pocs_nic.id
+  ]
+  vm_size             = "Standard_DS1_v2"
+  delete_os_disk_on_termination = true
+
+  admin_username      = "adminuser"
+  admin_password      = "Password123!"  # Replace with your desired password
+}
+----------------------------------------------
+2.Module Variables (modules/azure_vm/variables.tf):
+
+
+
+
+
+
+variable "vm_name" {
+  description = "Name of the virtual machine"
+}
+
+variable "resource_group_name" {
+  description = "Name of the resource group"
+}
+
+variable "location" {
+  description = "Azure region"
+}
+
+variable "public_ip_name" {
+  description = "Name of the public IP"
+}
+
+variable "vnet_name" {
+  description = "Name of the virtual network"
+}
+
+variable "subnet_name" {
+  description = "Name of the subnet"
+}
+
+variable "network_interface_name" {
+  description = "Name of the network interface"
+}
+
+variable "nsg_name" {
+  description = "Name of the network security group"
+}
+----------------------
+
+
+4.Module Outputs (modules/azure_vm/outputs.tf):
+
+
+
+output "vm_id" {
+  value = azurerm_windows_virtual_machine.eximius_pocs_vm.id
+}
+
+output "public_ip_address" {
+  value = azurerm_public_ip.pocs_public_ip.ip_address
+}
